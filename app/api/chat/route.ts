@@ -1,61 +1,43 @@
 import 'server-only'
+import OpenAI from 'openai'
 import { OpenAIStream, StreamingTextResponse } from 'ai'
-import { Configuration, OpenAIApi } from 'openai-edge'
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
-import { cookies } from 'next/headers'
-import { Database } from '@/lib/db_types'
+import { createClient } from '@/lib/supabase/server'
 
-import { auth } from '@/auth'
 import { nanoid } from '@/lib/utils'
 
-export const runtime = 'edge'
-
-const configuration = new Configuration({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 })
 
-const openai = new OpenAIApi(configuration)
-
 export async function POST(req: Request) {
-  const cookieStore = cookies()
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          cookieStore.set({ name, value, ...options })
-        },
-        remove(name: string, options: CookieOptions) {
-          cookieStore.set({ name, value: '', ...options })
-        },
-      },
-    })
-  const json = await req.json()
-  const { messages, previewToken } = json
-  const userId = (await auth({ cookieStore }))?.id
+  const supabase = createClient()
 
-  if (!userId) {
+  // Get authenticated user
+  const { data: { user }, error } = await supabase.auth.getUser()
+  
+  console.log('Auth debug:', { userId: user?.id, error: error?.message })
+
+  if (error || !user) {
     return new Response('Unauthorized', {
       status: 401
     })
   }
 
-  if (previewToken) {
-    configuration.apiKey = previewToken
-  }
+  const json = await req.json()
+  const { messages, previewToken } = json
 
-  const res = await openai.createChatCompletion({
-    model: 'gpt-3.5-turbo',
+  const openaiClient = previewToken 
+    ? new OpenAI({ apiKey: previewToken })
+    : openai
+
+  const response = await openaiClient.chat.completions.create({
+    model: 'gpt-4o-mini',
     messages,
     temperature: 0.7,
     stream: true
   })
 
-  const stream = OpenAIStream(res, {
+  const stream = OpenAIStream(response, {
     async onCompletion(completion) {
       const title = json.messages[0].content.substring(0, 100)
       const id = json.id ?? nanoid()
@@ -64,7 +46,7 @@ export async function POST(req: Request) {
       const payload = {
         id,
         title,
-        userId,
+        userId: user.id,
         createdAt,
         path,
         messages: [
@@ -76,8 +58,7 @@ export async function POST(req: Request) {
         ]
       }
 
-      // @ts-expect-error upsert doesn't like convo_id somehow
-      await supabase.from('chats').upsert({ convo_id: id, payload }, { onConflict: 'convo_id' }).throwOnError()
+      await supabase.from('chats').upsert({ id, payload }).throwOnError()
     }
   })
 

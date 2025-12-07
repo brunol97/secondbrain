@@ -44,30 +44,26 @@ export function UserMenu({ user }: UserMenuProps) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="pl-0">
-            {user?.user_metadata.avatar_url ? (
+            {user?.user_metadata?.avatar_url ? (
               <Image
                 height={60}
                 width={60}
                 className="h-6 w-6 select-none rounded-full ring-1 ring-zinc-100/10 transition-opacity duration-300 hover:opacity-80"
-                src={
-                  user?.user_metadata.avatar_url
-                    ? `${user.user_metadata.avatar_url}&s=60`
-                    : ''
-                }
-                alt={user.user_metadata.name ?? 'Avatar'}
+                src={`${user.user_metadata.avatar_url}&s=60`}
+                alt={user.user_metadata?.name ?? 'Avatar'}
               />
             ) : (
               <div className="flex h-7 w-7 shrink-0 select-none items-center justify-center rounded-full bg-muted/50 text-xs font-medium uppercase text-muted-foreground">
-                {getUserInitials(user?.user_metadata.name ?? user?.email)}
+                {getUserInitials(user?.user_metadata?.name ?? user?.email ?? 'U')}
               </div>
             )}
-            <span className="ml-2">{user?.user_metadata.name ?? '👋🏼'}</span>
+            <span className="ml-2">{user?.user_metadata?.name ?? user?.email ?? '👋🏼'}</span>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent sideOffset={8} align="start" className="w-[180px]">
           <DropdownMenuItem className="flex-col items-start">
             <div className="text-xs font-medium">
-              {user?.user_metadata.name}
+              {user?.user_metadata?.name ?? user?.email}
             </div>
             <div className="text-xs text-zinc-500">{user?.email}</div>
           </DropdownMenuItem>

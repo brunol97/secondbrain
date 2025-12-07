@@ -1,5 +1,5 @@
 import 'server-only'
-import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export const auth = async ({
@@ -8,7 +8,6 @@ export const auth = async ({
   cookieStore: ReturnType<typeof cookies>
 }) => {
   // Create a Supabase client configured to use cookies
-
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -20,7 +19,16 @@ export const auth = async ({
       },
     }
   )
-  const { data, error } = await supabase.auth.getUser()
-  if (error) throw error
-  return data.user
+  
+  try {
+    const { data, error } = await supabase.auth.getUser()
+    if (error || !data.user) {
+      return null
+    }
+    // Return in session-like format for compatibility
+    return { user: data.user }
+  } catch {
+    // No session - return null
+    return null
+  }
 }
