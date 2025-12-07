@@ -1,6 +1,6 @@
 'use server'
 import 'server-only'
-import { createServerActionClient } from '@supabase/auth-helpers-nextjs'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { Database } from '@/lib/db_types'
 import { revalidatePath } from 'next/cache'
@@ -14,9 +14,24 @@ export async function getChats(userId?: string | null) {
   }
   try {
     const cookieStore = cookies()
-    const supabase = createServerActionClient<Database>({
-      cookies: () => cookieStore
-    })
+
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            cookieStore.set({ name, value, ...options })
+          },
+          remove(name: string, options: CookieOptions) {
+            cookieStore.set({ name, value: '', ...options })
+          },
+        },
+      });
+
     const { data } = await supabase
       .from('chats')
       .select('payload')
@@ -32,13 +47,26 @@ export async function getChats(userId?: string | null) {
 
 export async function getChat(id: string) {
   const cookieStore = cookies()
-  const supabase = createServerActionClient<Database>({
-    cookies: () => cookieStore
-  })
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          cookieStore.set({ name, value, ...options })
+        },
+        remove(name: string, options: CookieOptions) {
+          cookieStore.set({ name, value: '', ...options })
+        },
+      },
+    });
   const { data } = await supabase
     .from('chats')
     .select('payload')
-    .eq('id', id)
+    .eq('convo_id', id)
     .maybeSingle()
 
   return (data?.payload as Chat) ?? null
@@ -47,10 +75,23 @@ export async function getChat(id: string) {
 export async function removeChat({ id, path }: { id: string; path: string }) {
   try {
     const cookieStore = cookies()
-    const supabase = createServerActionClient<Database>({
-      cookies: () => cookieStore
-    })
-    await supabase.from('chats').delete().eq('id', id).throwOnError()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            cookieStore.set({ name, value, ...options })
+          },
+          remove(name: string, options: CookieOptions) {
+            cookieStore.set({ name, value: '', ...options })
+          },
+        },
+      });
+    await supabase.from('chats').delete().eq('convo_id', id).throwOnError()
 
     revalidatePath('/')
     return revalidatePath(path)
@@ -64,9 +105,22 @@ export async function removeChat({ id, path }: { id: string; path: string }) {
 export async function clearChats() {
   try {
     const cookieStore = cookies()
-    const supabase = createServerActionClient<Database>({
-      cookies: () => cookieStore
-    })
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set(name: string, value: string, options: CookieOptions) {
+            cookieStore.set({ name, value, ...options })
+          },
+          remove(name: string, options: CookieOptions) {
+            cookieStore.set({ name, value: '', ...options })
+          },
+        },
+      });
     await supabase.from('chats').delete().throwOnError()
     revalidatePath('/')
     return redirect('/')
@@ -80,13 +134,26 @@ export async function clearChats() {
 
 export async function getSharedChat(id: string) {
   const cookieStore = cookies()
-  const supabase = createServerActionClient<Database>({
-    cookies: () => cookieStore
-  })
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          cookieStore.set({ name, value, ...options })
+        },
+        remove(name: string, options: CookieOptions) {
+          cookieStore.set({ name, value: '', ...options })
+        },
+      },
+    });
   const { data } = await supabase
     .from('chats')
     .select('payload')
-    .eq('id', id)
+    .eq('convo_id', id)
     .not('payload->sharePath', 'is', null)
     .maybeSingle()
 
@@ -100,13 +167,26 @@ export async function shareChat(chat: Chat) {
   }
 
   const cookieStore = cookies()
-  const supabase = createServerActionClient<Database>({
-    cookies: () => cookieStore
-  })
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          cookieStore.set({ name, value, ...options })
+        },
+        remove(name: string, options: CookieOptions) {
+          cookieStore.set({ name, value: '', ...options })
+        },
+      },
+    });
   await supabase
     .from('chats')
     .update({ payload: payload as any })
-    .eq('id', chat.id)
+    .eq('convo_id', chat.id)
     .throwOnError()
 
   return payload

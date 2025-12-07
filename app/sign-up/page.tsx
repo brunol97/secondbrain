@@ -7,9 +7,9 @@ import { redirect } from 'next/navigation'
 
 export default async function SignInPage() {
   const cookieStore = cookies()
-  const session = await auth({ cookieStore })
+  const user = await auth({ cookieStore })
   // redirect to home if user is already logged in
-  if (session?.user) {
+  if (user) {
     redirect('/')
   }
   return (
